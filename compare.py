@@ -1,6 +1,7 @@
 import ast
 from functools import lru_cache
 
+# Поиск расстояния Ливенштейна между двумя строками
 @lru_cache(maxsize=1024)
 def difference(str1, len1, str2, len2):
     if len2*len1 > 0:
@@ -15,10 +16,13 @@ def difference(str1, len1, str2, len2):
     else:
         return max(len2, len1)
 
+# Предобработка кода через ast
 class Standardizator(ast.NodeTransformer):
     
     def __init__(self):
         self.names = {}
+
+    # Вычисление тривиальных арифметических операций + и *
     def visit_BinOp(self, node: ast.BinOp):
         node.left = self.visit(node.left)
         node.right = self.visit(node.right)
@@ -30,27 +34,35 @@ class Standardizator(ast.NodeTransformer):
                 result = ast.Num(n = node.left.n * node.right.n)
                 node = ast.copy_location(result, node)
         return node
-    
+
+    # Замена имён переменных
     def visit_Name(self, node: ast.Name):
         if (node.id) in self.names:
             node.id = self.names[node.id]
         else:
-            new_id = f"a{str(hex(len(self.names)))[2:]}a"
+            new_id = f"a{str(hex(len(self.names)))[2:]}"
             self.names[node.id] = new_id
             node.id = new_id
         return node
-        
-
-tree = ast.parse("y = 2 * 1; y = y + 1; y += 1")
-std = Standardizator()
-tree = std.visit(tree)
-
-print(ast.dump(tree))
-print(ast.unparse(tree))
-
 
 if __name__ == '__main__':
-    str1 = "y = 3+4;z = 2*2*y;print(y+z)"
-    str2 = "variable1=7;variable2=     (4 * variable1); print(variable1+variable2)"
-
-    print(round((difference(str1, len(str1), str2, len(str2))/max(len(str1),len(str2)))*100,3))
+    
+    # Обрабатываются сразу несколько способов плагиата:
+    # 1) Замены констант на простые числовые выражения
+    # 2) Замена имён переменных
+    # 3) Изменения, никак не влияющие на код (например, добавление пустых строк,
+    # пробелов между операндами, комментариев)
+    
+    # Примеры полного плагиата кода
+    str1 = "y = 3+4;z = 2*2*y;\n#комментарий\nprint(y+z)"
+    str2 = "variable1=7;variable2=     (4 * variable1); print(variable1 + variable2)"
+    
+    std1 = Standardizator()
+    clean1 = ast.unparse(std1.visit(ast.parse(str1)))
+    std2 = Standardizator()
+    clean2 = ast.unparse(std2.visit(ast.parse(str2)))
+    
+    print(clean1)
+    print(clean2)
+    
+    print(difference(clean1, len(clean1), clean2, len(clean2))/max(len(clean1), len(clean2)))
